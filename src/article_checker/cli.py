@@ -1,14 +1,25 @@
 import sys
 from pathlib import Path
+from typing import Optional
 
 import click
 
 from . import __version__
 from .config import load_config, get_config_value, find_config_file
 from .checker import scan as scan_directory, get_all_links, DEFAULT_MAX_IMAGE_SIZE
+from .link_checker import check_links, DEFAULT_TIMEOUT, DEFAULT_MAX_WORKERS, DEFAULT_RETRY_COUNT
+from .compressor import compress_images, DEFAULT_QUALITY, DEFAULT_MAX_WIDTH, DEFAULT_MAX_HEIGHT
+from .renamer import rename_all, rename_articles, rename_images
+from .reporter import (
+    generate_text_report,
+    generate_json_report,
+    generate_html_report,
+    print_console_summary,
+    SEVERITY_ICONS_SIMPLE,
+)
 
 
-def _do_scan(ctx, max_image_size: Optional[int] = None) -> "ScanResult":
+def _do_scan(ctx, max_image_size=None):
     article_dir = ctx.obj["article_dir"]
     image_dir = ctx.obj["image_dir"]
     config = ctx.obj["config"]
@@ -25,16 +36,6 @@ def _do_scan(ctx, max_image_size: Optional[int] = None) -> "ScanResult":
         ignore_patterns=ignore_patterns,
         ignore_files=ignore_files,
     )
-from .link_checker import check_links, DEFAULT_TIMEOUT, DEFAULT_MAX_WORKERS, DEFAULT_RETRY_COUNT
-from .compressor import compress_images, DEFAULT_QUALITY, DEFAULT_MAX_WIDTH, DEFAULT_MAX_HEIGHT
-from .renamer import rename_all, rename_articles, rename_images
-from .reporter import (
-    generate_text_report,
-    generate_json_report,
-    generate_html_report,
-    print_console_summary,
-    SEVERITY_ICONS_SIMPLE,
-)
 
 
 def _get_icon(severity: str) -> str:

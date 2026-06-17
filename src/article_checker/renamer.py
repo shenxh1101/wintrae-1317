@@ -137,6 +137,19 @@ def _generate_article_new_name(
     return '-'.join(filter(None, parts)) + article.path.suffix.lower()
 
 
+def _build_image_article_map(
+    articles: List[ArticleFile],
+    images: List[ImageFile],
+) -> Dict[str, ArticleFile]:
+    img_name_to_article: Dict[str, ArticleFile] = {}
+    for article in articles:
+        for ref in article.referenced_images:
+            img_name = Path(ref).name
+            if img_name not in img_name_to_article:
+                img_name_to_article[img_name] = article
+    return img_name_to_article
+
+
 def _generate_image_new_name(
     image: ImageFile,
     custom_prefix: Optional[str] = None,
@@ -144,6 +157,7 @@ def _generate_image_new_name(
     date_format: str = "%Y%m%d",
     default_category: str = "general",
     index: int = 1,
+    article: Optional[ArticleFile] = None,
 ) -> str:
     if custom_prefix:
         parts = [_slugify(custom_prefix)]
@@ -152,11 +166,16 @@ def _generate_image_new_name(
         return '-'.join(parts) + image.path.suffix.lower()
     
     if name_template:
+        date_str = ""
+        category = _slugify(default_category)
+        if article:
+            date_str = _extract_date(article.content, article.path, date_format)
+            category = _extract_category(article.content, default_category)
         stem = _slugify(image.path.stem)
         name = _apply_name_template(
             name_template,
-            date="",
-            category=_slugify(default_category),
+            date=date_str,
+            category=category,
             title=stem,
             index=str(index).zfill(2),
             idx=str(index),
@@ -171,6 +190,7 @@ def _generate_image_new_name(
 
 def build_image_name_map(
     images: List[ImageFile],
+    articles: Optional[List[ArticleFile]] = None,
     custom_prefix: Optional[str] = None,
     name_template: Optional[str] = None,
     date_format: str = "%Y%m%d",
@@ -179,11 +199,16 @@ def build_image_name_map(
     name_map: Dict[Path, Path] = {}
     used_names: set = set()
     
+    img_to_article: Dict[str, ArticleFile] = {}
+    if articles:
+        img_to_article = _build_image_article_map(articles, images)
+    
     idx = 1
     for image in images:
         if not image.is_referenced:
             continue
         
+        article = img_to_article.get(image.path.name)
         new_name = _generate_image_new_name(
             image,
             custom_prefix=custom_prefix,
@@ -191,6 +216,7 @@ def build_image_name_map(
             date_format=date_format,
             default_category=default_category,
             index=idx,
+            article=article,
         )
         idx += 1
         
@@ -279,11 +305,13 @@ def rename_all(
     article_output_dir = Path(article_output_dir)
     image_output_dir = Path(image_output_dir)
     
-    article_output_dir.mkdir(parents=True, exist_ok=True)
-    image_output_dir.mkdir(parents=True, exist_ok=True)
+    if not dry_run:
+        article_output_dir.mkdir(parents=True, exist_ok=True)
+        image_output_dir.mkdir(parents=True, exist_ok=True)
     
     image_name_map = build_image_name_map(
         images,
+        articles=articles,
         custom_prefix=custom_prefix,
         name_template=name_template,
         date_format=date_format,
