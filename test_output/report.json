@@ -1,0 +1,133 @@
+{
+  "generated_at": "2026-06-18T02:51:24.085510",
+  "summary": {
+    "article_count": 3,
+    "image_count": 5,
+    "referenced_image_count": 2,
+    "unused_image_count": 3,
+    "total_image_size_bytes": 66398,
+    "total_issues": 6,
+    "issues_by_severity": {
+      "error": 1,
+      "warning": 2,
+      "info": 3
+    },
+    "issues_by_type": {
+      "empty_title": 1,
+      "missing_cover": 2,
+      "unused_material": 3
+    }
+  },
+  "issues": [
+    {
+      "type": "empty_title",
+      "severity": "error",
+      "message": "文章标题为空: post2.md",
+      "file_path": "test_data\\articles\\post2.md",
+      "details": {}
+    },
+    {
+      "type": "missing_cover",
+      "severity": "warning",
+      "message": "缺少封面图: post2.md",
+      "file_path": "test_data\\articles\\post2.md",
+      "details": {}
+    },
+    {
+      "type": "missing_cover",
+      "severity": "warning",
+      "message": "缺少封面图: post3.html",
+      "file_path": "test_data\\articles\\post3.html",
+      "details": {}
+    },
+    {
+      "type": "unused_material",
+      "severity": "info",
+      "message": "未引用的素材: cover1.jpg",
+      "file_path": "test_data\\images\\cover1.jpg",
+      "details": {}
+    },
+    {
+      "type": "unused_material",
+      "severity": "info",
+      "message": "未引用的素材: large_image.jpg",
+      "file_path": "test_data\\images\\large_image.jpg",
+      "details": {}
+    },
+    {
+      "type": "unused_material",
+      "severity": "info",
+      "message": "未引用的素材: unused.jpg",
+      "file_path": "test_data\\images\\unused.jpg",
+      "details": {}
+    }
+  ],
+  "articles": [
+    {
+      "path": "test_data\\articles\\post1.md",
+      "title": "Python 入门教程",
+      "has_cover": true,
+      "referenced_images": [
+        "image1.png",
+        "image2.jpg"
+      ],
+      "referenced_links": [
+        "https://docs.python.org/3/",
+        "https://www.python.org",
+        "image1.png",
+        "subdir/image2.jpg",
+        "https://docs.python.org/3/)。"
+      ]
+    },
+    {
+      "path": "test_data\\articles\\post2.md",
+      "title": "",
+      "has_cover": false,
+      "referenced_images": [
+        "image1.png"
+      ],
+      "referenced_links": [
+        "image1.png",
+        "https://this-is-an-invalid-link-for-testing.com"
+      ]
+    },
+    {
+      "path": "test_data\\articles\\post3.html",
+      "title": "Web 开发指南",
+      "has_cover": false,
+      "referenced_images": [
+        "image1.png"
+      ],
+      "referenced_links": [
+        "https://developer.mozilla.org/"
+      ]
+    }
+  ],
+  "images": [
+    {
+      "path": "test_data\\images\\cover1.jpg",
+      "size_bytes": 826,
+      "is_referenced": false
+    },
+    {
+      "path": "test_data\\images\\image1.png",
+      "size_bytes": 585,
+      "is_referenced": true
+    },
+    {
+      "path": "test_data\\images\\large_image.jpg",
+      "size_bytes": 63131,
+      "is_referenced": false
+    },
+    {
+      "path": "test_data\\images\\unused.jpg",
+      "size_bytes": 826,
+      "is_referenced": false
+    },
+    {
+      "path": "test_data\\images\\subdir\\image2.jpg",
+      "size_bytes": 1030,
+      "is_referenced": true
+    }
+  ]
+}
