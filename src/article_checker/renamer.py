@@ -2,7 +2,7 @@ import re
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 
 from .types import ArticleFile, ImageFile
 
@@ -13,6 +13,14 @@ CATEGORY_PATTERNS = [
     re.compile(r'^category:\s*(.+)$', re.MULTILINE),
     re.compile(r'^tags:\s*\[(.+?)\]', re.MULTILINE),
     re.compile(r'^section:\s*(.+)$', re.MULTILINE),
+]
+
+IMAGE_MD_PATTERN = re.compile(r'!\[.*?\]\((.*?)\)')
+IMAGE_HTML_PATTERN = re.compile(r'<img[^>]+src=["\'](.*?)["\']', re.IGNORECASE)
+COVER_PATTERNS = [
+    re.compile(r'^(cover:\s*)(.+)$', re.MULTILINE),
+    re.compile(r'^(banner:\s*)(.+)$', re.MULTILINE),
+    re.compile(r'^(image:\s*)(.+)$', re.MULTILINE),
 ]
 
 
@@ -57,7 +65,7 @@ def _extract_title_for_rename(article: ArticleFile) -> str:
     return _slugify(stem) or "untitled"
 
 
-def _generate_new_name(
+def _generate_article_new_name(
     article: ArticleFile,
     use_date: bool = True,
     use_category: bool = True,
@@ -82,24 +90,138 @@ def _generate_new_name(
     return '-'.join(parts) + article.path.suffix.lower()
 
 
-def _update_references(
-    article: ArticleFile,
-    old_name: str,
-    new_name: str,
-    image_dir: Path,
+def _generate_image_new_name(
+    image: ImageFile,
+    custom_prefix: Optional[str] = None,
 ) -> str:
-    content = article.content
+    parts = []
     
-    old_stem = Path(old_name).stem
-    new_stem = Path(new_name).stem
+    if custom_prefix:
+        parts.append(_slugify(custom_prefix))
     
-    for image_path in image_dir.rglob("*"):
-        if image_path.is_file() and image_path.stem == old_stem:
-            old_ref = image_path.name
-            new_ref = f"{new_stem}{image_path.suffix.lower()}"
-            content = content.replace(old_ref, new_ref)
+    stem = _slugify(image.path.stem)
+    parts.append(stem)
     
-    return content
+    return '-'.join(parts) + image.path.suffix.lower()
+
+
+def build_image_name_map(
+    images: List[ImageFile],
+    custom_prefix: Optional[str] = None,
+) -> Dict[Path, Path]:
+    name_map: Dict[Path, Path] = {}
+    used_names: set = set()
+    
+    for image in images:
+        if not image.is_referenced:
+            continue
+        
+        new_name = _generate_image_new_name(image, custom_prefix)
+        
+        counter = 1
+        base_name = new_name
+        while new_name in used_names:
+            stem_part = Path(base_name).stem
+            suffix = Path(base_name).suffix
+            new_name = f"{stem_part}-{counter}{suffix}"
+            counter += 1
+        
+        used_names.add(new_name)
+        name_map[image.path] = Path(new_name)
+    
+    return name_map
+
+
+def _update_image_references(
+    content: str,
+    image_name_map: Dict[Path, Path],
+) -> Tuple[str, List[Tuple[str, str]]]:
+    updated_content = content
+    changes: List[Tuple[str, str]] = []
+    
+    old_names: Dict[str, str] = {}
+    for old_path, new_path in image_name_map.items():
+        old_names[old_path.name] = new_path.name
+        old_names[str(old_path)] = str(new_path)
+        old_names[str(old_path).replace('\\', '/')] = str(new_path).replace('\\', '/')
+    
+    for old_ref, new_ref in old_names.items():
+        if old_ref != new_ref and old_ref in updated_content:
+            updated_content = updated_content.replace(old_ref, new_ref)
+            changes.append((old_ref, new_ref))
+    
+    return updated_content, changes
+
+
+def rename_all(
+    articles: List[ArticleFile],
+    images: List[ImageFile],
+    article_output_dir: Path,
+    image_output_dir: Path,
+    use_date: bool = True,
+    use_category: bool = True,
+    custom_prefix: Optional[str] = None,
+    dry_run: bool = False,
+) -> Dict:
+    article_output_dir = Path(article_output_dir)
+    image_output_dir = Path(image_output_dir)
+    
+    article_output_dir.mkdir(parents=True, exist_ok=True)
+    image_output_dir.mkdir(parents=True, exist_ok=True)
+    
+    image_name_map = build_image_name_map(images, custom_prefix)
+    
+    article_results: List[Dict] = []
+    used_article_names: set = set()
+    
+    for article in articles:
+        new_name = _generate_article_new_name(
+            article, use_date, use_category, custom_prefix
+        )
+        
+        counter = 1
+        base_name = new_name
+        while new_name in used_article_names:
+            stem = Path(base_name).stem
+            suffix = Path(base_name).suffix
+            new_name = f"{stem}-{counter}{suffix}"
+            counter += 1
+        
+        used_article_names.add(new_name)
+        
+        old_path = article.path
+        new_path = article_output_dir / new_name
+        
+        updated_content, ref_changes = _update_image_references(
+            article.content, image_name_map
+        )
+        
+        if not dry_run:
+            new_path.write_text(updated_content, encoding='utf-8')
+        
+        article_results.append({
+            'old_path': old_path,
+            'new_path': new_path,
+            'ref_changes': ref_changes,
+        })
+    
+    image_results: List[Dict] = []
+    for old_path, new_name in image_name_map.items():
+        new_path = image_output_dir / new_name
+        
+        if not dry_run:
+            shutil.copy2(old_path, new_path)
+        
+        image_results.append({
+            'old_path': old_path,
+            'new_path': new_path,
+        })
+    
+    return {
+        'articles': article_results,
+        'images': image_results,
+        'dry_run': dry_run,
+    }
 
 
 def rename_articles(
@@ -119,7 +241,7 @@ def rename_articles(
     used_names: set = set()
     
     for article in articles:
-        new_name = _generate_new_name(
+        new_name = _generate_article_new_name(
             article, use_date, use_category, custom_prefix
         )
         
@@ -137,10 +259,7 @@ def rename_articles(
         new_path = output_dir / new_name
         
         if not dry_run:
-            updated_content = _update_references(
-                article, old_path.name, new_name, image_dir
-            )
-            new_path.write_text(updated_content, encoding='utf-8')
+            new_path.write_text(article.content, encoding='utf-8')
         
         results.append((old_path, new_path, dry_run))
     
@@ -162,31 +281,9 @@ def rename_images(
     results: List[Tuple[Path, Path, bool]] = []
     used_names: set = set()
     
-    for image in images:
-        if not image.is_referenced:
-            continue
-        
-        parts = []
-        
-        if custom_prefix:
-            parts.append(_slugify(custom_prefix))
-        
-        stem = _slugify(image.path.stem)
-        parts.append(stem)
-        
-        new_name = '-'.join(parts) + image.path.suffix.lower()
-        
-        counter = 1
-        base_name = new_name
-        while new_name in used_names:
-            stem_part = Path(base_name).stem
-            suffix = Path(base_name).suffix
-            new_name = f"{stem_part}-{counter}{suffix}"
-            counter += 1
-        
-        used_names.add(new_name)
-        
-        old_path = image.path
+    name_map = build_image_name_map(images, custom_prefix)
+    
+    for old_path, new_name in name_map.items():
         new_path = output_dir / new_name
         
         if not dry_run:

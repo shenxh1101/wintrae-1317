@@ -58,6 +58,14 @@ def _extract_cover(content: str) -> str:
 
 def _extract_referenced_images(content: str) -> List[str]:
     images: Set[str] = set()
+    
+    for pattern in COVER_PATTERNS:
+        for match in pattern.finditer(content):
+            img = match.group(1).strip()
+            if img and not img.startswith(('http://', 'https://')):
+                img = img.strip('"\'')
+                images.add(Path(img).name)
+    
     for match in IMAGE_MD_PATTERN.finditer(content):
         img = match.group(1).strip()
         if img and not img.startswith(('http://', 'https://')):
@@ -69,10 +77,32 @@ def _extract_referenced_images(content: str) -> List[str]:
     return list(images)
 
 
+_TRAILING_PUNCTUATION = (
+    '.,;!?)"\'）》」』】〕〗〙〛"',
+    '。，；！？）、"',
+)
+
+
 def _clean_link(link: str) -> str:
-    link = link.rstrip(').,;!?)"\'')
+    link = link.strip()
+    changed = True
+    while changed:
+        changed = False
+        for punct_set in _TRAILING_PUNCTUATION:
+            for ch in punct_set:
+                if link.endswith(ch):
+                    link = link[:-1]
+                    changed = True
+                    break
+            if changed:
+                break
+    
     if link.endswith(')') and '(' not in link:
         link = link[:-1]
+    
+    if link.endswith('）') and '（' not in link:
+        link = link[:-1]
+    
     return link.strip()
 
 

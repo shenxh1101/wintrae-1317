@@ -1,0 +1,27 @@
+{
+  "article_dir": "test_data/articles",
+  "image_dir": "test_data/images",
+  "output_dir": "test_output",
+  "image": {
+    "max_size_mb": 2,
+    "quality": 85,
+    "max_width": 1920,
+    "max_height": 1080,
+    "suffix": "_compressed"
+  },
+  "rename": {
+    "date_format": "%Y%m%d",
+    "name_template": "{date}_{category}_{index}",
+    "category": "article"
+  },
+  "check_links": {
+    "timeout": 15,
+    "max_retries": 2,
+    "verify_ssl": true,
+    "max_workers": 10
+  },
+  "ignore": {
+    "patterns": [".git", "node_modules", "__pycache__"],
+    "files": []
+  }
+}
