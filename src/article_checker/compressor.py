@@ -80,9 +80,13 @@ def compress_images(
     keep_original: bool = True,
     only_large: bool = False,
     large_threshold: int = 2 * 1024 * 1024,
+    suffix: Optional[str] = None,
 ) -> List[Tuple[Path, Path, bool, int, int, str]]:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    
+    if suffix is None:
+        suffix = COMPRESSED_SUFFIX
     
     results: List[Tuple[Path, Path, bool, int, int, str]] = []
     
@@ -93,7 +97,7 @@ def compress_images(
             continue
         
         if keep_original:
-            output_path = output_dir / f"{input_path.stem}{COMPRESSED_SUFFIX}{input_path.suffix.lower()}"
+            output_path = output_dir / f"{input_path.stem}{suffix}{input_path.suffix.lower()}"
         else:
             output_path = output_dir / input_path.name
         

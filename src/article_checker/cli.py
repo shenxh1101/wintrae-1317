@@ -6,6 +6,25 @@ import click
 from . import __version__
 from .config import load_config, get_config_value, find_config_file
 from .checker import scan as scan_directory, get_all_links, DEFAULT_MAX_IMAGE_SIZE
+
+
+def _do_scan(ctx, max_image_size: Optional[int] = None) -> "ScanResult":
+    article_dir = ctx.obj["article_dir"]
+    image_dir = ctx.obj["image_dir"]
+    config = ctx.obj["config"]
+    ignore_patterns = ctx.obj.get("ignore_patterns")
+    ignore_files = ctx.obj.get("ignore_files")
+    
+    if max_image_size is None:
+        max_image_size = get_config_value(config, "max_image_size", default=DEFAULT_MAX_IMAGE_SIZE)
+    
+    return scan_directory(
+        article_dir,
+        image_dir,
+        max_image_size,
+        ignore_patterns=ignore_patterns,
+        ignore_files=ignore_files,
+    )
 from .link_checker import check_links, DEFAULT_TIMEOUT, DEFAULT_MAX_WORKERS, DEFAULT_RETRY_COUNT
 from .compressor import compress_images, DEFAULT_QUALITY, DEFAULT_MAX_WIDTH, DEFAULT_MAX_HEIGHT
 from .renamer import rename_all, rename_articles, rename_images
@@ -78,6 +97,14 @@ def cli(ctx, article_dir, image_dir, output_dir, config):
     ctx.obj["image_dir"] = image_dir
     ctx.obj["output_dir"] = output_dir
     
+    ignore_patterns = get_config_value(config_data, "ignore", "patterns", default=[])
+    ignore_files = get_config_value(config_data, "ignore", "files", default=[])
+    ignore_images = get_config_value(config_data, "ignore", "images", default=[])
+    if ignore_images:
+        ignore_files = list(ignore_files) + list(ignore_images)
+    ctx.obj["ignore_patterns"] = ignore_patterns
+    ctx.obj["ignore_files"] = ignore_files
+    
     if config_path:
         click.echo(f"使用配置文件: {config_path}")
 
@@ -96,14 +123,15 @@ def scan(ctx, max_image_size):
         click.echo("错误: 请使用 --article-dir 和 --image-dir 指定目录，或在配置文件中设置", err=True)
         sys.exit(1)
     
-    if max_image_size is None:
-        max_image_size = get_config_value(config, "max_image_size", default=DEFAULT_MAX_IMAGE_SIZE)
-    
     click.echo(f"正在扫描...")
     click.echo(f"  文章目录: {article_dir}")
     click.echo(f"  图片目录: {image_dir}")
+    if ctx.obj.get("ignore_patterns"):
+        click.echo(f"  忽略模式: {', '.join(ctx.obj['ignore_patterns'])}")
+    if ctx.obj.get("ignore_files"):
+        click.echo(f"  忽略文件: {len(ctx.obj['ignore_files'])} 个")
     
-    result = scan_directory(article_dir, image_dir, max_image_size)
+    result = _do_scan(ctx, max_image_size)
     ctx.obj["scan_result"] = result
     
     print_console_summary(result)
@@ -146,15 +174,26 @@ def rename(ctx, no_date, no_category, prefix, dry_run, show_ref_changes):
     if prefix is None:
         prefix = get_config_value(config, "naming", "prefix")
     
+    name_template = get_config_value(config, "naming", "template")
+    date_format = get_config_value(config, "naming", "date_format", default="%Y%m%d")
+    default_category = get_config_value(config, "naming", "default_category", default="article")
+    
     if "scan_result" not in ctx.obj:
         click.echo("正在扫描...")
-        result = scan_directory(article_dir, image_dir)
+        result = _do_scan(ctx)
         ctx.obj["scan_result"] = result
     else:
         result = ctx.obj["scan_result"]
     
     if dry_run:
-        click.echo("【预览模式】以下是将执行的重命名操作:\n")
+        click.echo("【预览模式】以下是将执行的重命名操作:")
+        if name_template:
+            click.echo(f"  命名模板: {name_template}")
+        if date_format:
+            click.echo(f"  日期格式: {date_format}")
+        if default_category:
+            click.echo(f"  默认栏目: {default_category}")
+        click.echo("")
     else:
         click.echo("正在重命名...\n")
     
@@ -169,6 +208,9 @@ def rename(ctx, no_date, no_category, prefix, dry_run, show_ref_changes):
         use_date=use_date,
         use_category=use_category,
         custom_prefix=prefix,
+        name_template=name_template,
+        date_format=date_format,
+        default_category=default_category,
         dry_run=dry_run,
     )
     
@@ -235,7 +277,7 @@ def check_links_cmd(ctx, timeout, max_workers, retry_count, no_verify_ssl):
     
     if "scan_result" not in ctx.obj:
         click.echo("正在扫描...")
-        result = scan_directory(article_dir, image_dir)
+        result = _do_scan(ctx)
         ctx.obj["scan_result"] = result
     else:
         result = ctx.obj["scan_result"]
@@ -303,16 +345,22 @@ def compress(ctx, quality, max_width, max_height, only_large, large_threshold, o
     
     if "scan_result" not in ctx.obj:
         click.echo("正在扫描...")
-        result = scan_directory(article_dir, image_dir)
+        result = _do_scan(ctx)
         ctx.obj["scan_result"] = result
     else:
         result = ctx.obj["scan_result"]
     
     compress_output = output_dir / "compressed_images"
     
+    suffix = get_config_value(config, "compress", "suffix")
+    if suffix is None:
+        suffix = get_config_value(config, "image", "suffix")
+    
     click.echo(f"正在压缩图片...")
     if only_large:
         click.echo(f"  仅处理大于 {large_threshold / 1024 / 1024:.2f} MB 的图片")
+    if suffix and not overwrite:
+        click.echo(f"  文件后缀: {suffix}")
     
     results = compress_images(
         result.images,
@@ -323,6 +371,7 @@ def compress(ctx, quality, max_width, max_height, only_large, large_threshold, o
         keep_original=not overwrite,
         only_large=only_large,
         large_threshold=large_threshold,
+        suffix=suffix,
     )
     
     if not results:
@@ -383,7 +432,7 @@ def report(ctx, format, filename, include_links):
     
     if "scan_result" not in ctx.obj:
         click.echo("正在扫描...")
-        result = scan_directory(article_dir, image_dir)
+        result = _do_scan(ctx)
         ctx.obj["scan_result"] = result
     else:
         result = ctx.obj["scan_result"]

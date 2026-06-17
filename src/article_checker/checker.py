@@ -1,6 +1,7 @@
+import fnmatch
 import re
 from pathlib import Path
-from typing import List, Set, Dict
+from typing import List, Set, Dict, Optional
 
 from bs4 import BeautifulSoup
 
@@ -12,6 +13,52 @@ from .types import (
     IssueSeverity,
     ScanResult,
 )
+
+
+def _should_ignore(
+    file_path: Path,
+    base_dir: Path,
+    ignore_patterns: Optional[List[str]] = None,
+    ignore_files: Optional[List[str]] = None,
+) -> bool:
+    if not ignore_patterns and not ignore_files:
+        return False
+    
+    try:
+        rel_path = file_path.relative_to(base_dir)
+        rel_str = str(rel_path).replace('\\', '/')
+    except ValueError:
+        rel_str = file_path.name
+    
+    if ignore_files:
+        for ig_file in ignore_files:
+            ig_path = Path(ig_file)
+            try:
+                if file_path.resolve() == ig_path.resolve():
+                    return True
+            except (OSError, FileNotFoundError):
+                pass
+            if file_path.name == ig_path.name:
+                return True
+            if str(rel_path) == ig_file or rel_str == ig_file.replace('\\', '/'):
+                return True
+    
+    if ignore_patterns:
+        parts = rel_str.split('/')
+        for pattern in ignore_patterns:
+            pattern = pattern.strip().rstrip('/')
+            if not pattern:
+                continue
+            if fnmatch.fnmatch(rel_str, pattern):
+                return True
+            if fnmatch.fnmatch(file_path.name, pattern):
+                return True
+            if any(fnmatch.fnmatch(part, pattern) for part in parts):
+                return True
+            if pattern.rstrip('/') in parts:
+                return True
+    
+    return False
 
 
 ARTICLE_EXTENSIONS = {".md", ".markdown", ".html", ".htm"}
@@ -242,6 +289,8 @@ def scan(
     article_dir: Path,
     image_dir: Path,
     max_image_size: int = DEFAULT_MAX_IMAGE_SIZE,
+    ignore_patterns: Optional[List[str]] = None,
+    ignore_files: Optional[List[str]] = None,
 ) -> ScanResult:
     article_dir = Path(article_dir)
     image_dir = Path(image_dir)
@@ -252,11 +301,15 @@ def scan(
     if article_dir.exists():
         for file_path in article_dir.rglob("*"):
             if file_path.is_file() and file_path.suffix.lower() in ARTICLE_EXTENSIONS:
+                if _should_ignore(file_path, article_dir, ignore_patterns, ignore_files):
+                    continue
                 articles.append(_parse_article(file_path))
 
     if image_dir.exists():
         for file_path in image_dir.rglob("*"):
             if file_path.is_file() and file_path.suffix.lower() in IMAGE_EXTENSIONS:
+                if _should_ignore(file_path, image_dir, ignore_patterns, ignore_files):
+                    continue
                 images.append(_parse_image(file_path))
 
     issues: List[Issue] = []
