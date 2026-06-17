@@ -104,6 +104,76 @@ def find_config_file(start_dir: Optional[Path] = None) -> Optional[Path]:
     return None
 
 
+def _normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
+    result = config.copy()
+    
+    if "image" in result and isinstance(result["image"], dict):
+        img = result["image"]
+        if "max_size_mb" in img:
+            max_size_bytes = int(img["max_size_mb"] * 1024 * 1024)
+            result["max_image_size"] = max_size_bytes
+            if "compress" not in result:
+                result["compress"] = {}
+            result["compress"]["large_threshold"] = max_size_bytes
+        if "quality" in img:
+            if "compress" not in result:
+                result["compress"] = {}
+            result["compress"]["quality"] = img["quality"]
+        if "max_width" in img:
+            if "compress" not in result:
+                result["compress"] = {}
+            result["compress"]["max_width"] = img["max_width"]
+        if "max_height" in img:
+            if "compress" not in result:
+                result["compress"] = {}
+            result["compress"]["max_height"] = img["max_height"]
+        if "suffix" in img:
+            if "compress" not in result:
+                result["compress"] = {}
+            result["compress"]["suffix"] = img["suffix"]
+    
+    if "rename" in result and isinstance(result["rename"], dict):
+        ren = result["rename"]
+        if "naming" not in result:
+            result["naming"] = {}
+        if "name_template" in ren:
+            result["naming"]["template"] = ren["name_template"]
+        if "category" in ren:
+            result["naming"]["default_category"] = ren["category"]
+        if "date_format" in ren:
+            result["naming"]["date_format"] = ren["date_format"]
+        if "prefix" in ren:
+            result["naming"]["prefix"] = ren["prefix"]
+        if "use_date" in ren:
+            result["naming"]["use_date"] = ren["use_date"]
+        if "use_category" in ren:
+            result["naming"]["use_category"] = ren["use_category"]
+    
+    if "check_links" in result and isinstance(result["check_links"], dict):
+        cl = result["check_links"]
+        if "link_check" not in result:
+            result["link_check"] = {}
+        if "timeout" in cl:
+            result["link_check"]["timeout"] = cl["timeout"]
+        if "max_retries" in cl:
+            result["link_check"]["retry_count"] = cl["max_retries"]
+        if "retry_count" in cl:
+            result["link_check"]["retry_count"] = cl["retry_count"]
+        if "verify_ssl" in cl:
+            result["link_check"]["verify_ssl"] = cl["verify_ssl"]
+        if "max_workers" in cl:
+            result["link_check"]["max_workers"] = cl["max_workers"]
+    
+    if "report" not in result:
+        result["report"] = {}
+    if "format" in result:
+        result["report"]["format"] = result["format"]
+    if "report_format" in result:
+        result["report"]["format"] = result["report_format"]
+    
+    return result
+
+
 def load_config(
     config_path: Optional[Path] = None,
     start_dir: Optional[Path] = None,
@@ -125,6 +195,7 @@ def load_config(
         file_config = _load_toml_config(config_path)
     
     if file_config:
+        file_config = _normalize_config(file_config)
         config = _deep_merge(config, file_config)
     
     return config

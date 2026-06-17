@@ -3,14 +3,14 @@ title: Python 入门教程
 date: 2024-01-15
 category: tech
 tags: [python, tutorial]
-cover: /images/cover1.jpg
+cover: /images/demo-cover1.jpg
 ---
 
 # Python 入门教程
 
 欢迎学习 Python 编程！这是一篇面向初学者的教程。
 
-![示例图片](image1.png)
+![示例图片](demo-image1.png)
 
 ## 安装 Python
 
@@ -24,4 +24,4 @@ cover: /images/cover1.jpg
 print("Hello, World!")
 ```
 
-![另一张图片](subdir/image2.jpg)
+![另一张图片](subdir/demo-image2.jpg)

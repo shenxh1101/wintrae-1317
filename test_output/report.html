@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文章素材包检查报告</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                         "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        header h1 { font-size: 24px; margin-bottom: 8px; }
+        header .meta { opacity: 0.9; font-size: 14px; }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .summary-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .summary-card .label { color: #888; font-size: 14px; margin-bottom: 8px; }
+        .summary-card .value { font-size: 32px; font-weight: bold; }
+        .summary-card.error .value { color: #e74c3c; }
+        .summary-card.warning .value { color: #f39c12; }
+        .summary-card.info .value { color: #3498db; }
+        .summary-card.articles .value { color: #27ae60; }
+        .summary-card.images .value { color: #9b59b6; }
+        
+        .filter-bar {
+            background: white;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+        .filter-bar label { font-size: 14px; color: #666; }
+        .filter-btn {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover { border-color: #667eea; color: #667eea; }
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .filter-btn.error.active { background: #e74c3c; border-color: #e74c3c; }
+        .filter-btn.warning.active { background: #f39c12; border-color: #f39c12; }
+        .filter-btn.info.active { background: #3498db; border-color: #3498db; }
+        
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .search-box:focus { outline: none; border-color: #667eea; }
+        
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .section h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .issue-list { list-style: none; }
+        .issue-item {
+            padding: 14px 16px;
+            border-left: 4px solid #ddd;
+            margin-bottom: 10px;
+            background: #fafafa;
+            border-radius: 0 8px 8px 0;
+            transition: background 0.2s;
+        }
+        .issue-item:hover { background: #f0f0f0; }
+        .issue-item.error { border-left-color: #e74c3c; }
+        .issue-item.warning { border-left-color: #f39c12; }
+        .issue-item.info { border-left-color: #3498db; }
+        
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .issue-type {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: white;
+            font-weight: 500;
+        }
+        .issue-type.error { background: #e74c3c; }
+        .issue-type.warning { background: #f39c12; }
+        .issue-type.info { background: #3498db; }
+        .issue-message { font-weight: 500; }
+        .issue-file {
+            font-size: 13px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .issue-file a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .issue-file a:hover { text-decoration: underline; }
+        .issue-details {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed #eee;
+            font-size: 13px;
+            color: #666;
+        }
+        .issue-details ul { margin-left: 20px; margin-top: 4px; }
+        
+        .file-section { margin-bottom: 20px; }
+        .file-section h3 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #555;
+        }
+        .file-list { list-style: none; }
+        .file-item {
+            padding: 10px 14px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+        .file-item:hover { background: #f5f5f5; }
+        .file-status {
+            width: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .file-status.ok { color: #27ae60; }
+        .file-status.bad { color: #e74c3c; }
+        .file-item a {
+            color: #333;
+            text-decoration: none;
+            flex: 1;
+        }
+        .file-item a:hover { color: #667eea; text-decoration: underline; }
+        .file-size { color: #999; font-size: 13px; }
+        
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #eee;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            font-size: 14px;
+            color: #666;
+            transition: all 0.2s;
+        }
+        .tab:hover { color: #667eea; }
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 500;
+        }
+        
+        .hidden { display: none; }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 文章素材包检查报告</h1>
+            <div class="meta">生成时间: 2026-06-18 03:19:32</div>
+        </header>
+        
+        <div class="summary-grid">
+            <div class="summary-card articles">
+                <div class="label">文章数量</div>
+                <div class="value">3</div>
+            </div>
+            <div class="summary-card images">
+                <div class="label">图片数量</div>
+                <div class="value">5</div>
+            </div>
+            <div class="summary-card error">
+                <div class="label">错误</div>
+                <div class="value">1</div>
+            </div>
+            <div class="summary-card warning">
+                <div class="label">警告</div>
+                <div class="value">2</div>
+            </div>
+            <div class="summary-card info">
+                <div class="label">提示</div>
+                <div class="value">2</div>
+            </div>
+        </div>
+        
+        <div class="filter-bar">
+            <label>筛选:</label>
+            <button class="filter-btn active" data-filter="all">全部 (5)</button>
+            <button class="filter-btn error" data-filter="error">错误 (1)</button>
+            <button class="filter-btn warning" data-filter="warning">警告 (2)</button>
+            <button class="filter-btn info" data-filter="info">提示 (2)</button>
+            <input type="text" class="search-box" placeholder="搜索问题..." id="searchInput">
+        </div>
+        
+        <div class="section">
+            <h2>问题清单</h2>
+            <div class="issue-list" id="issueList">
+                
+            <li class="issue-item error" data-severity="error" data-message="文章标题为空: post2.md">
+                <div class="issue-header">
+                    <span class="issue-message">文章标题为空: post2.md</span>
+                    <span class="issue-type error">空标题</span>
+                </div>
+                <div class="issue-file">文件: <a href="file:///D:/TraeProjects/1317/test_data/articles/post2.md" target="_blank">test_data\articles\post2.md</a></div>
+                
+            </li>
+        
+            <li class="issue-item warning" data-severity="warning" data-message="缺少封面图: post2.md">
+                <div class="issue-header">
+                    <span class="issue-message">缺少封面图: post2.md</span>
+                    <span class="issue-type warning">缺失封面</span>
+                </div>
+                <div class="issue-file">文件: <a href="file:///D:/TraeProjects/1317/test_data/articles/post2.md" target="_blank">test_data\articles\post2.md</a></div>
+                
+            </li>
+        
+            <li class="issue-item warning" data-severity="warning" data-message="缺少封面图: post3.html">
+                <div class="issue-header">
+                    <span class="issue-message">缺少封面图: post3.html</span>
+                    <span class="issue-type warning">缺失封面</span>
+                </div>
+                <div class="issue-file">文件: <a href="file:///D:/TraeProjects/1317/test_data/articles/post3.html" target="_blank">test_data\articles\post3.html</a></div>
+                
+            </li>
+        
+            <li class="issue-item info" data-severity="info" data-message="未引用的素材: large_image.jpg">
+                <div class="issue-header">
+                    <span class="issue-message">未引用的素材: large_image.jpg</span>
+                    <span class="issue-type info">未引用素材</span>
+                </div>
+                <div class="issue-file">文件: <a href="file:///D:/TraeProjects/1317/test_data/images/large_image.jpg" target="_blank">test_data\images\large_image.jpg</a></div>
+                
+            </li>
+        
+            <li class="issue-item info" data-severity="info" data-message="未引用的素材: unused.jpg">
+                <div class="issue-header">
+                    <span class="issue-message">未引用的素材: unused.jpg</span>
+                    <span class="issue-type info">未引用素材</span>
+                </div>
+                <div class="issue-file">文件: <a href="file:///D:/TraeProjects/1317/test_data/images/unused.jpg" target="_blank">test_data\images\unused.jpg</a></div>
+                
+            </li>
+        
+            </div>
+            <div class="empty-state hidden" id="emptyState">没有找到匹配的问题</div>
+        </div>
+        
+        <div class="section">
+            <div class="tabs">
+                <div class="tab active" data-tab="articles">文章文件 (3)</div>
+                <div class="tab" data-tab="images">图片文件 (5)</div>
+            </div>
+            <div class="tab-content" id="tab-articles">
+                <div class="file-list">
+                    
+            <li class="file-item">
+                <span class="file-status ok">✓</span>
+                <a href="file:///D:/TraeProjects/1317/test_data/articles/post1.md" target="_blank">test_data\articles\post1.md</a>
+                <span class="file-size">3 张图片</span>
+            </li>
+        
+            <li class="file-item">
+                <span class="file-status bad">✗</span>
+                <a href="file:///D:/TraeProjects/1317/test_data/articles/post2.md" target="_blank">test_data\articles\post2.md</a>
+                <span class="file-size">1 张图片</span>
+            </li>
+        
+            <li class="file-item">
+                <span class="file-status bad">✗</span>
+                <a href="file:///D:/TraeProjects/1317/test_data/articles/post3.html" target="_blank">test_data\articles\post3.html</a>
+                <span class="file-size">1 张图片</span>
+            </li>
+        
+                </div>
+            </div>
+            <div class="tab-content hidden" id="tab-images">
+                <div class="file-list">
+                    
+            <li class="file-item">
+                <span class="file-status ok">✓</span>
+                <a href="file:///D:/TraeProjects/1317/test_data/images/cover1.jpg" target="_blank">test_data\images\cover1.jpg</a>
+                <span class="file-size">826 B</span>
+            </li>
+        
+            <li class="file-item">
+                <span class="file-status ok">✓</span>
+                <a href="file:///D:/TraeProjects/1317/test_data/images/image1.png" target="_blank">test_data\images\image1.png</a>
+                <span class="file-size">585 B</span>
+            </li>
+        
+            <li class="file-item">
+                <span class="file-status bad">✗</span>
+                <a href="file:///D:/TraeProjects/1317/test_data/images/large_image.jpg" target="_blank">test_data\images\large_image.jpg</a>
+                <span class="file-size">61.65 KB</span>
+            </li>
+        
+            <li class="file-item">
+                <span class="file-status bad">✗</span>
+                <a href="file:///D:/TraeProjects/1317/test_data/images/unused.jpg" target="_blank">test_data\images\unused.jpg</a>
+                <span class="file-size">826 B</span>
+            </li>
+        
+            <li class="file-item">
+                <span class="file-status ok">✓</span>
+                <a href="file:///D:/TraeProjects/1317/test_data/images/subdir/image2.jpg" target="_blank">test_data\images\subdir\image2.jpg</a>
+                <span class="file-size">1.01 KB</span>
+            </li>
+        
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 筛选功能
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const issueItems = document.querySelectorAll('.issue-item');
+        const searchInput = document.getElementById('searchInput');
+        const emptyState = document.getElementById('emptyState');
+        const issueList = document.getElementById('issueList');
+        
+        let currentFilter = 'all';
+        let currentSearch = '';
+        
+        function applyFilters() {
+            let visibleCount = 0;
+            
+            issueItems.forEach(item => {
+                const severity = item.dataset.severity;
+                const message = item.dataset.message.toLowerCase();
+                const matchesFilter = currentFilter === 'all' || severity === currentFilter;
+                const matchesSearch = currentSearch === '' || message.includes(currentSearch);
+                
+                if (matchesFilter && matchesSearch) {
+                    item.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+            
+            if (visibleCount === 0) {
+                emptyState.classList.remove('hidden');
+                issueList.classList.add('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                issueList.classList.remove('hidden');
+            }
+        }
+        
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                applyFilters();
+            });
+        });
+        
+        searchInput.addEventListener('input', (e) => {
+            currentSearch = e.target.value.toLowerCase();
+            applyFilters();
+        });
+        
+        // Tab 切换
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                const tabName = tab.dataset.tab;
+                tabContents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+                document.getElementById('tab-' + tabName).classList.remove('hidden');
+            });
+        });
+    </script>
+</body>
+</html>

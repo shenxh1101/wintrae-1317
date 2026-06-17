@@ -139,18 +139,52 @@ def _update_image_references(
     updated_content = content
     changes: List[Tuple[str, str]] = []
     
-    old_names: Dict[str, str] = {}
+    old_name_to_new: Dict[str, str] = {}
     for old_path, new_path in image_name_map.items():
-        old_names[old_path.name] = new_path.name
-        old_names[str(old_path)] = str(new_path)
-        old_names[str(old_path).replace('\\', '/')] = str(new_path).replace('\\', '/')
+        old_name_to_new[old_path.name] = new_path.name
     
-    for old_ref, new_ref in old_names.items():
-        if old_ref != new_ref and old_ref in updated_content:
-            updated_content = updated_content.replace(old_ref, new_ref)
-            changes.append((old_ref, new_ref))
+    def _replace_cover(match: re.Match) -> str:
+        prefix = match.group(1)
+        img_ref = match.group(2).strip()
+        img_name = Path(img_ref).name
+        if img_name in old_name_to_new:
+            new_name = old_name_to_new[img_name]
+            if new_name != img_name:
+                new_ref = str(Path(img_ref).with_name(new_name)).replace('\\', '/')
+                if img_ref.startswith('/'):
+                    new_ref = '/' + new_ref.lstrip('/')
+                changes.append((img_ref, new_ref))
+                return prefix + new_ref
+        return match.group(0)
     
-    return updated_content, changes
+    def _replace_img(match: re.Match) -> str:
+        full_match = match.group(0)
+        img_ref = match.group(1)
+        img_name = Path(img_ref).name
+        if img_name in old_name_to_new:
+            new_name = old_name_to_new[img_name]
+            if new_name != img_name:
+                new_ref = str(Path(img_ref).with_name(new_name)).replace('\\', '/')
+                if img_ref.startswith('/'):
+                    new_ref = '/' + new_ref.lstrip('/')
+                changes.append((img_ref, new_ref))
+                return full_match.replace(img_ref, new_ref)
+        return full_match
+    
+    for pattern in COVER_PATTERNS:
+        updated_content = pattern.sub(_replace_cover, updated_content)
+    
+    updated_content = IMAGE_MD_PATTERN.sub(_replace_img, updated_content)
+    updated_content = IMAGE_HTML_PATTERN.sub(_replace_img, updated_content)
+    
+    seen = set()
+    unique_changes: List[Tuple[str, str]] = []
+    for old, new in changes:
+        if old != new and old not in seen:
+            seen.add(old)
+            unique_changes.append((old, new))
+    
+    return updated_content, unique_changes
 
 
 def rename_all(

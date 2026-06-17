@@ -2,6 +2,7 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
+from string import Template
 from typing import List, Dict, Optional
 
 from .types import (
@@ -488,62 +489,62 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="container">
         <header>
             <h1>📋 文章素材包检查报告</h1>
-            <div class="meta">生成时间: {generated_at}</div>
+            <div class="meta">生成时间: $generated_at</div>
         </header>
         
         <div class="summary-grid">
             <div class="summary-card articles">
                 <div class="label">文章数量</div>
-                <div class="value">{article_count}</div>
+                <div class="value">$article_count</div>
             </div>
             <div class="summary-card images">
                 <div class="label">图片数量</div>
-                <div class="value">{image_count}</div>
+                <div class="value">$image_count</div>
             </div>
             <div class="summary-card error">
                 <div class="label">错误</div>
-                <div class="value">{error_count}</div>
+                <div class="value">$error_count</div>
             </div>
             <div class="summary-card warning">
                 <div class="label">警告</div>
-                <div class="value">{warning_count}</div>
+                <div class="value">$warning_count</div>
             </div>
             <div class="summary-card info">
                 <div class="label">提示</div>
-                <div class="value">{info_count}</div>
+                <div class="value">$info_count</div>
             </div>
         </div>
         
         <div class="filter-bar">
             <label>筛选:</label>
-            <button class="filter-btn active" data-filter="all">全部 ({total_issues})</button>
-            <button class="filter-btn error" data-filter="error">错误 ({error_count})</button>
-            <button class="filter-btn warning" data-filter="warning">警告 ({warning_count})</button>
-            <button class="filter-btn info" data-filter="info">提示 ({info_count})</button>
+            <button class="filter-btn active" data-filter="all">全部 ($total_issues)</button>
+            <button class="filter-btn error" data-filter="error">错误 ($error_count)</button>
+            <button class="filter-btn warning" data-filter="warning">警告 ($warning_count)</button>
+            <button class="filter-btn info" data-filter="info">提示 ($info_count)</button>
             <input type="text" class="search-box" placeholder="搜索问题..." id="searchInput">
         </div>
         
         <div class="section">
             <h2>问题清单</h2>
             <div class="issue-list" id="issueList">
-                {issue_items_html}
+                $issue_items_html
             </div>
             <div class="empty-state hidden" id="emptyState">没有找到匹配的问题</div>
         </div>
         
         <div class="section">
             <div class="tabs">
-                <div class="tab active" data-tab="articles">文章文件 ({article_count})</div>
-                <div class="tab" data-tab="images">图片文件 ({image_count})</div>
+                <div class="tab active" data-tab="articles">文章文件 ($article_count)</div>
+                <div class="tab" data-tab="images">图片文件 ($image_count)</div>
             </div>
             <div class="tab-content" id="tab-articles">
                 <div class="file-list">
-                    {article_items_html}
+                    $article_items_html
                 </div>
             </div>
             <div class="tab-content hidden" id="tab-images">
                 <div class="file-list">
-                    {image_items_html}
+                    $image_items_html
                 </div>
             </div>
         </div>
@@ -569,53 +570,53 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const matchesFilter = currentFilter === 'all' || severity === currentFilter;
                 const matchesSearch = currentSearch === '' || message.includes(currentSearch);
                 
-                if (matchesFilter && matchesSearch) {{
+                if (matchesFilter && matchesSearch) {
                     item.classList.remove('hidden');
                     visibleCount++;
-                }} else {{
+                } else {
                     item.classList.add('hidden');
-                }}
-            }});
+                }
+            });
             
-            if (visibleCount === 0) {{
+            if (visibleCount === 0) {
                 emptyState.classList.remove('hidden');
                 issueList.classList.add('hidden');
-            }} else {{
+            } else {
                 emptyState.classList.add('hidden');
                 issueList.classList.remove('hidden');
-            }}
-        }}
+            }
+        }
         
-        filterBtns.forEach(btn => {{
-            btn.addEventListener('click', () => {{
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
                 filterBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentFilter = btn.dataset.filter;
                 applyFilters();
-            }});
-        }});
+            });
+        });
         
-        searchInput.addEventListener('input', (e) => {{
+        searchInput.addEventListener('input', (e) => {
             currentSearch = e.target.value.toLowerCase();
             applyFilters();
-        }});
+        });
         
         // Tab 切换
         const tabs = document.querySelectorAll('.tab');
         const tabContents = document.querySelectorAll('.tab-content');
         
-        tabs.forEach(tab => {{
-            tab.addEventListener('click', () => {{
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
                 tabs.forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 
                 const tabName = tab.dataset.tab;
-                tabContents.forEach(content => {{
+                tabContents.forEach(content => {
                     content.classList.add('hidden');
-                }});
+                });
                 document.getElementById('tab-' + tabName).classList.remove('hidden');
-            }});
-        }});
+            });
+        });
     </script>
 </body>
 </html>"""
@@ -706,7 +707,8 @@ def generate_html_report(
     from datetime import datetime
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    html = HTML_TEMPLATE.format(
+    template = Template(HTML_TEMPLATE)
+    html = template.substitute(
         generated_at=generated_at,
         article_count=len(scan_result.articles),
         image_count=len(scan_result.images),

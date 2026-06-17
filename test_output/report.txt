@@ -1,23 +1,23 @@
 ================================================================================
 文章素材包检查报告
 ================================================================================
-生成时间: 2026-06-18 02:51:24
+生成时间: 2026-06-18 03:19:32
 
 【检查摘要】
 --------------------------------------------------------------------------------
 文章数量: 3
 图片数量: 5
-  已引用: 2
-  未引用: 3
+  已引用: 3
+  未引用: 2
 图片总大小: 64.84 KB
 
-问题总数: 6
+问题总数: 5
   错误: 1
   警告: 2
-  提示: 3
+  提示: 2
 
   缺失封面: 2
-  未引用素材: 3
+  未引用素材: 2
   空标题: 1
 
 【问题清单】
@@ -30,10 +30,9 @@
   1. 缺少封面图: post2.md [test_data\articles\post2.md]
   2. 缺少封面图: post3.html [test_data\articles\post3.html]
 
-[INFO] INFO (3):
-  1. 未引用的素材: cover1.jpg [test_data\images\cover1.jpg]
-  2. 未引用的素材: large_image.jpg [test_data\images\large_image.jpg]
-  3. 未引用的素材: unused.jpg [test_data\images\unused.jpg]
+[INFO] INFO (2):
+  1. 未引用的素材: large_image.jpg [test_data\images\large_image.jpg]
+  2. 未引用的素材: unused.jpg [test_data\images\unused.jpg]
 
 【文件清单 - 可复核】
 --------------------------------------------------------------------------------
@@ -41,8 +40,8 @@
 文章文件:
   [OK] 1. test_data\articles\post1.md
      标题: Python 入门教程
-     引用图片: 2 张
-     外部链接: 5 个
+     引用图片: 3 张
+     外部链接: 4 个
      封面: 已设置
   [X] 2. test_data\articles\post2.md
      引用图片: 1 张
@@ -55,7 +54,7 @@
      封面: 未设置
 
 图片文件:
-  [X] 1. test_data\images\cover1.jpg (826 B)
+  [OK] 1. test_data\images\cover1.jpg (826 B)
   [OK] 2. test_data\images\image1.png (585 B)
   [X] 3. test_data\images\large_image.jpg (61.65 KB)
   [X] 4. test_data\images\unused.jpg (826 B)

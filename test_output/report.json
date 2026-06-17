@@ -1,21 +1,21 @@
 {
-  "generated_at": "2026-06-18T02:51:24.085510",
+  "generated_at": "2026-06-18T03:19:32.854795",
   "summary": {
     "article_count": 3,
     "image_count": 5,
-    "referenced_image_count": 2,
-    "unused_image_count": 3,
+    "referenced_image_count": 3,
+    "unused_image_count": 2,
     "total_image_size_bytes": 66398,
-    "total_issues": 6,
+    "total_issues": 5,
     "issues_by_severity": {
       "error": 1,
       "warning": 2,
-      "info": 3
+      "info": 2
     },
     "issues_by_type": {
       "empty_title": 1,
       "missing_cover": 2,
-      "unused_material": 3
+      "unused_material": 2
     }
   },
   "issues": [
@@ -43,13 +43,6 @@
     {
       "type": "unused_material",
       "severity": "info",
-      "message": "未引用的素材: cover1.jpg",
-      "file_path": "test_data\\images\\cover1.jpg",
-      "details": {}
-    },
-    {
-      "type": "unused_material",
-      "severity": "info",
       "message": "未引用的素材: large_image.jpg",
       "file_path": "test_data\\images\\large_image.jpg",
       "details": {}
@@ -68,15 +61,15 @@
       "title": "Python 入门教程",
       "has_cover": true,
       "referenced_images": [
-        "image1.png",
-        "image2.jpg"
+        "cover1.jpg",
+        "image2.jpg",
+        "image1.png"
       ],
       "referenced_links": [
+        "subdir/image2.jpg",
         "https://docs.python.org/3/",
         "https://www.python.org",
-        "image1.png",
-        "subdir/image2.jpg",
-        "https://docs.python.org/3/)。"
+        "image1.png"
       ]
     },
     {
@@ -87,8 +80,8 @@
         "image1.png"
       ],
       "referenced_links": [
-        "image1.png",
-        "https://this-is-an-invalid-link-for-testing.com"
+        "https://this-is-an-invalid-link-for-testing.com",
+        "image1.png"
       ]
     },
     {
@@ -107,7 +100,7 @@
     {
       "path": "test_data\\images\\cover1.jpg",
       "size_bytes": 826,
-      "is_referenced": false
+      "is_referenced": true
     },
     {
       "path": "test_data\\images\\image1.png",
